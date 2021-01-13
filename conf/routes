@@ -1,0 +1,5 @@
+
+GET /        controllers.AsyncController.message
+
+
+      
