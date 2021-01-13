@@ -1,5 +1,5 @@
 
-GET /        controllers.AsyncController.message
+GET /locations     controllers.AsyncController.message(clientId:String, latitude:String, longitude:String)
 
 
       
