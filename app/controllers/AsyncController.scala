@@ -1,11 +1,8 @@
 package controllers
 
 import akka.actor.ActorSystem
-import com.mongodb.CursorType
 import javax.inject._
-import model.LocationModel
-import org.mongodb.scala.bson.conversions
-import org.mongodb.scala.{Document, FindObservable, SingleObservable, bson}
+import model.{LocationModel}
 import play.api.mvc._
 import repository.Repository
 
@@ -38,11 +35,17 @@ class AsyncController @Inject()(cc: ControllerComponents, actorSystem: ActorSyst
   }
 
 
-  def goToDb(locationModel: LocationModel): Future[LookupResult] = {
+  def goToDb(income: LocationModel): Future[LookupResult] = {
 
-    val res: FindObservable[Document] = new Repository().findByClientId(locationModel.clientId)
+    val models: Seq[LocationModel] = new Repository().findByClientId(income.clientId)
+      .filter((location: LocationModel) => check(location, income))
 
+    Future(LookupResult(models, income.clientId))
   }
 
-  def placeToQueue(result: LookupResult): Unit = ???
+  def check(fromDb: LocationModel, fromMobile: LocationModel) = {
+    fromMobile.latitude == fromDb.latitude && fromMobile.longitude == fromDb.longitude
+  }
+
+  def placeToQueue(result: LookupResult): Unit = println(s"Placing to queue: $result")
 }

@@ -1,5 +1,5 @@
 package controllers
 
-import model.Location
+import model.LocationModel
 
-case class LookupResult(nearestPlaces: List[Location], clientId: String)
+case class LookupResult(nearestPlaces: Seq[LocationModel], clientId: String)
