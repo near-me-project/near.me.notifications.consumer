@@ -8,27 +8,23 @@ import repository.Repository
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.{Failure, Success, Try}
 
 @Singleton
 class AsyncController @Inject()(cc: ControllerComponents, actorSystem: ActorSystem)(implicit exec: ExecutionContext) extends AbstractController(cc) {
 
   def message(clientId: String, latitude: String, longitude: String) = Action.async {
     Future {
-      processIncomeLocationUpdates(LocationModel(clientId, latitude, longitude)).foreach(res => res.map(r => placeToQueue(r)))
+      processIncomeLocationUpdates(LocationModel(clientId, latitude, longitude)).map(res => placeToQueue(res))
       Ok
     }
   }
 
-  private val processIncomeLocationUpdates: LocationModel => Future[Option[LookupResult]] = location => {
-    val promise = Promise[Option[LookupResult]]()
+  private val processIncomeLocationUpdates: LocationModel => Future[LookupResult] = location => {
+    val promise = Promise[LookupResult]()
 
     actorSystem.scheduler.scheduleOnce(1.millisecond) {
 
-      goToDb(location).onComplete {
-        case Success(res) => promise.complete(Try(Option(res)))
-        case Failure(e) => promise.complete(Try(None))
-      }
+      goToDb(location).onComplete(promise.complete)
 
     }(actorSystem.dispatcher)
     promise.future
@@ -36,11 +32,10 @@ class AsyncController @Inject()(cc: ControllerComponents, actorSystem: ActorSyst
 
 
   def goToDb(income: LocationModel): Future[LookupResult] = {
-
-    val models: Seq[LocationModel] = new Repository().findByClientId(income.clientId)
-      .filter((location: LocationModel) => check(location, income))
-
-    Future(LookupResult(models, income.clientId))
+    Future {
+      val models: Seq[LocationModel] = new Repository().findByClientId(income.clientId).filter((location: LocationModel) => check(location, income))
+      LookupResult(models, income.clientId)
+    }
   }
 
   def check(fromDb: LocationModel, fromMobile: LocationModel) = fromMobile.latitude == fromDb.latitude && fromMobile.longitude == fromDb.longitude
