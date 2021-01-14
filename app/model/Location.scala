@@ -1,3 +1,4 @@
 package model
 
-case class Location(latitude: String, longitude: String)
+
+case class Location(var latitude: String, var longitude: String)

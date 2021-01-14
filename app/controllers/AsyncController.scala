@@ -2,7 +2,8 @@ package controllers
 
 import akka.actor.ActorSystem
 import javax.inject._
-import model.{LocationModel}
+import messaging.RabbitClient
+import model.{LocationModel, LookupResult}
 import play.api.mvc._
 import repository.Repository
 
@@ -19,7 +20,7 @@ class AsyncController @Inject()(cc: ControllerComponents, actorSystem: ActorSyst
     }
   }
 
-  private val processIncomeLocationUpdates: LocationModel => Future[LookupResult] = location => {
+  private def processIncomeLocationUpdates: LocationModel => Future[LookupResult] = location => {
     val promise = Promise[LookupResult]()
 
     actorSystem.scheduler.scheduleOnce(1.millisecond) {
@@ -30,15 +31,15 @@ class AsyncController @Inject()(cc: ControllerComponents, actorSystem: ActorSyst
     promise.future
   }
 
-
-  def goToDb(income: LocationModel): Future[LookupResult] = {
+  private def goToDb(income: LocationModel): Future[LookupResult] = {
     Future {
       val models: Seq[LocationModel] = new Repository().findByClientId(income.clientId).filter((location: LocationModel) => check(location, income))
-      LookupResult(models, income.clientId)
+      println(s"Found locations: $models")
+      LookupResult(models.toList, income.clientId)
     }
   }
 
-  def check(fromDb: LocationModel, fromMobile: LocationModel) = fromMobile.latitude == fromDb.latitude && fromMobile.longitude == fromDb.longitude
+  private def check(fromDb: LocationModel, fromMobile: LocationModel) = fromMobile.latitude == fromDb.latitude && fromMobile.longitude == fromDb.longitude
 
-  def placeToQueue(result: LookupResult): Unit = println(s"Placing to queue: $result")
+  private def placeToQueue(result: LookupResult): Unit =  RabbitClient.getInstance().sendEventToQueue(result, RabbitClient.MOBILE_NOTIFICATIONS_QUEUE)
 }

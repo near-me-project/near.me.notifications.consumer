@@ -17,6 +17,7 @@ class Repository {
       .map(dbo => LocationModel(clientId, dbo.getString("latitude"), dbo.getString("longitude")))
        Await.result(res.toFuture(), Duration.Inf) // TODO: replase with Observable
 
+
     /**
      * observable.subscribe ( new Observer[Document] {
      * override def onNext(result: Document): Unit = println(result.toJson())
