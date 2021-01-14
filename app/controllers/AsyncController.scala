@@ -15,15 +15,15 @@ class AsyncController @Inject()(cc: ControllerComponents, actorSystem: ActorSyst
 
   def message(clientId: String, latitude: String, longitude: String) = Action.async {
     Future {
-      eventualEventualResult(LocationModel(clientId, latitude, longitude)).foreach(res => res.map(r => placeToQueue(r)))
+      processIncomeLocationUpdates(LocationModel(clientId, latitude, longitude)).foreach(res => res.map(r => placeToQueue(r)))
       Ok
     }
   }
 
-  private val eventualEventualResult: LocationModel => Future[Option[LookupResult]] = location => {
+  private val processIncomeLocationUpdates: LocationModel => Future[Option[LookupResult]] = location => {
     val promise = Promise[Option[LookupResult]]()
 
-    actorSystem.scheduler.scheduleOnce(1.seconds) {
+    actorSystem.scheduler.scheduleOnce(1.millisecond) {
 
       goToDb(location).onComplete {
         case Success(res) => promise.complete(Try(Option(res)))
@@ -43,9 +43,7 @@ class AsyncController @Inject()(cc: ControllerComponents, actorSystem: ActorSyst
     Future(LookupResult(models, income.clientId))
   }
 
-  def check(fromDb: LocationModel, fromMobile: LocationModel) = {
-    fromMobile.latitude == fromDb.latitude && fromMobile.longitude == fromDb.longitude
-  }
+  def check(fromDb: LocationModel, fromMobile: LocationModel) = fromMobile.latitude == fromDb.latitude && fromMobile.longitude == fromDb.longitude
 
   def placeToQueue(result: LookupResult): Unit = println(s"Placing to queue: $result")
 }
