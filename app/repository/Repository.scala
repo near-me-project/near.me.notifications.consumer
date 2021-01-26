@@ -12,7 +12,7 @@ class Repository {
   import Repository.locationsCollection
 
   def findByClientId(clientId: String) = {
-    println(s"Looking for locations for client $clientId")
+    println(s"[Repository] Looking for locations for client $clientId")
     val res: Observable[LocationModel] = locationsCollection.find(equal("clientId", clientId))
       .map(dbo => LocationModel(clientId, dbo.getString("latitude"), dbo.getString("longitude")))
        Await.result(res.toFuture(), Duration.Inf) // TODO: replase with Observable
